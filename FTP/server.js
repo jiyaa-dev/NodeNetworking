@@ -3,18 +3,40 @@ import fs from "fs/promises";
 import path from "path";
 const ls = async () => {
 	let files = await fs.readdir(path.resolve("./Files"));
-        let obj = {};
-        for(let i=0; i<files.length; i++){
-                let stats = await fs.stat(path.resolve(`./Files/${files[i]}`));
-                obj[files[i]] = stats;
-        }
-        return obj;
+	let obj = {};
+	for (let i = 0; i < files.length; i++) {
+		let stats = await fs.stat(path.resolve(`./Files/${files[i]}`));
+		obj[files[i]] = stats;
+	}
+	return obj;
+};
+const del = async (file) => {
+	try {
+	      await fs.unlink(path.resolve(`./Files/${file}`));
+	      return true;
+	} 
+	catch (err) {
+		return false;
+	}
 };
 const server = net.createServer((socket) => {
 	socket.on("data", async (cmd) => {
 		cmd = cmd.toString();
+
 		if (cmd == "ls\n") {
 			socket.write(JSON.stringify(await ls()));
+		} else if (cmd.split(" ")[0] == "delete") {
+			let file = cmd.split(" ")[1];
+			file = file.replace("\n", "");
+			if(await del(file) == true){
+				socket.write(`${file} deleted successfully!\n`);
+			}
+			else{
+				socket.write("File does not exist!\n");
+			}
+		}
+		else{
+			socket.write("Invalid Command\n");
 		}
 	});
 });

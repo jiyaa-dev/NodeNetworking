@@ -1,5 +1,6 @@
 import net from "net";
 import fs from "fs/promises";
+import fs2 from "fs";
 import path from "path";
 const ls = async () => {
 	let files = await fs.readdir(path.resolve("./Files"));
@@ -12,11 +13,21 @@ const ls = async () => {
 };
 const del = async (file) => {
 	try {
-	      await fs.unlink(path.resolve(`./Files/${file}`));
-	      return true;
-	} 
-	catch (err) {
+		await fs.unlink(path.resolve(`./Files/${file}`));
+		return true;
+	} catch (err) {
 		return false;
+	}
+};
+const download = (file, socket) => {
+	try {
+		let stream = fs2.createReadStream(path.resolve(`./Files/${file}`), {
+			highWaterMark: 2 * 1024,
+		});
+		stream.pipe(socket);
+	} catch (err) {
+		socket.write("Unable to download the video");
+		console.log(err);
 	}
 };
 const server = net.createServer((socket) => {
@@ -28,14 +39,29 @@ const server = net.createServer((socket) => {
 		} else if (cmd.split(" ")[0] == "delete") {
 			let file = cmd.split(" ")[1];
 			file = file.replace("\n", "");
-			if(await del(file) == true){
+			if ((await del(file)) == true) {
 				socket.write(`${file} deleted successfully!\n`);
-			}
-			else{
+			} else {
 				socket.write("File does not exist!\n");
 			}
-		}
-		else{
+		} else if (cmd.split(" ")[0] == "download") {
+			let file = cmd.split(" ")[1];
+			file = file.replace("\n", "");
+			let isFilePresent = await fs.readdir(path.resolve(`./Files`));
+			let len = isFilePresent.length;
+			let flag = "false";
+			for (let i = 0; i < len; i++) {
+				if (isFilePresent[i] == file) {
+					flag = "true";
+					break;
+				}
+			}
+			if (flag == "true") {
+				download(file, socket);
+			} else {
+				socket.write("File doesn't exists!\n");
+			}
+		} else {
 			socket.write("Invalid Command\n");
 		}
 	});

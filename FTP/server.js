@@ -30,6 +30,10 @@ const download = (file, socket) => {
 		console.log(err);
 	}
 };
+const upload = (file,socket)=>{
+	const writeStream = fs2.createWriteStream(path.resolve(`./Files/${file}`));
+	socket.pipe(writeStream);
+}
 const server = net.createServer((socket) => {
 	socket.on("data", async (cmd) => {
 		cmd = cmd.toString();
@@ -61,7 +65,13 @@ const server = net.createServer((socket) => {
 			} else {
 				socket.write("File doesn't exists!\n");
 			}
-		} else {
+		}
+		else if(cmd.split(" ")[0] == "upload"){
+			let file = cmd.split(" ")[1];
+			file = file.replace("\n","");
+			upload(file,socket);
+		} 
+		else {
 			socket.write("Invalid Command\n");
 		}
 	});
